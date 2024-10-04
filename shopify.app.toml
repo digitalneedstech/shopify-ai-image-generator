@@ -3,7 +3,7 @@
 client_id = "078aebbd1149d7bcbd361786069e40c8"
 name = "Imagify"
 handle = "digitalneeds-ai-image-creator"
-application_url = "https://headers-trained-bless-punishment.trycloudflare.com"
+application_url = "https://ai-image-generator-63t3.onrender.com"
 embedded = true
 
 [build]
@@ -13,13 +13,13 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_products,write_products"
 
 [auth]
 redirect_urls = [
-  "https://headers-trained-bless-punishment.trycloudflare.com/auth/callback",
-  "https://headers-trained-bless-punishment.trycloudflare.com/auth/shopify/callback",
-  "https://headers-trained-bless-punishment.trycloudflare.com/api/auth/callback"
+  "https://ai-image-generator-63t3.onrender.com/auth/callback",
+  "https://ai-image-generator-63t3.onrender.com/auth/shopify/callback",
+  "https://ai-image-generator-63t3.onrender.com/api/auth/callback"
 ]
 
 [webhooks]
