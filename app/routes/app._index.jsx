@@ -126,7 +126,7 @@ let planData = [
     url: "/app/upgrade",
     features: [
       "Generate Product Image",
-      "1 Image for one product can be generated at one time",
+      "One Image for one product can be generated at one time",
       "Slow Image generation"
     ]
   },
@@ -139,10 +139,8 @@ let planData = [
     url: "/app/upgrade",
     features: [
       "Generate Product Image",
-      "1 Image for one product can be generated at one time",
-      "Apply the generated image to product on website",
-      "Re-generate the generated image",
-      "Image Generation with optimal speed"
+      "One Image for one product can be generated at one time",
+      "Apply and re-generate the image"
     ]
   },
 ]
@@ -169,7 +167,7 @@ export default function Index() {
   return (
     <Page>
       
-      <ui-title-bar title="Contentify - AI Content Creator">
+      <ui-title-bar title="Imagify - AI Content Creator">
       <Button primary url="/app/upgrade">
                       Upgrade to Pro
                     </Button>
