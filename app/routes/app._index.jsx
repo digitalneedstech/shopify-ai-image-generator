@@ -125,10 +125,9 @@ let planData = [
     name: "Free",
     url: "/app/upgrade",
     features: [
-      "1 Product Title Update at a time",
-"1 Product Description Update at a time",
-"Automatic Update Of Product Title/Description"
- 
+      "Generate Product Image",
+      "1 Image for one product can be generated at one time",
+      "Slow Image generation"
     ]
   },
   {
@@ -139,9 +138,11 @@ let planData = [
     action: "Upgrade to pro",
     url: "/app/upgrade",
     features: [
-      "5 Product Title Update at a time",
-"5 Product Description Update at a time",
-"Automatic Update Of Product Title/Description"
+      "Generate Product Image",
+      "1 Image for one product can be generated at one time",
+      "Apply the generated image to product on website",
+      "Re-generate the generated image",
+      "Image Generation with optimal speed"
     ]
   },
 ]
@@ -182,16 +183,16 @@ export default function Index() {
       <br/>
       <List type="bullet">
       <List.Item><Text as="h2" variant="headingSm">
-            Navigate to Text Generator page of this app from sidebar 
+            Navigate to Image Generator page of this app from sidebar 
           </Text></List.Item>
       <List.Item><Text as="h2" variant="headingSm">
-            Select the products to update:
+            All the products will be shown in table
           </Text></List.Item>
       <List.Item><Text as="h2" variant="headingSm">
-            Select whether you want to generate titles, descriptions
+            Select the product to update
           </Text></List.Item>
       <List.Item><Text as="h2" variant="headingSm">
-            Click On Generate 
+            Click on Generate Image
           </Text></List.Item>
     </List>
 

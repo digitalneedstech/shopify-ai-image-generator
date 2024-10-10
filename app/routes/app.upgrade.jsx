@@ -8,8 +8,8 @@ export async function loader({ request }) {
     plans: [MONTHLY_PLAN],
     onFailure: async () => billing.request({
       plan: MONTHLY_PLAN,
-      isTest: false,
-      returnUrl: `https://admin.shopify.com/store/${myshop}/apps/digitalneeds-ai-image-creator/app`
+      isTest: true,
+      returnUrl: `https://admin.shopify.com/store/${myshop}/apps/ai-image-creator/app`
     }),
   });
 };

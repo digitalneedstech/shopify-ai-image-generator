@@ -1,9 +1,9 @@
 import { IndexTable, Thumbnail } from "@shopify/polaris";
 
 export default function TableRowComponent({ id, title, imageUrl, description, index,selectedResources}){
-    let disabled=imageUrl==null? true:false;
+    let disabled=description==null || description=="" ? true:false;
     return (
-        <IndexTable.Row
+        <IndexTable.Row  
         id={id}
         key={id}
         selected={selectedResources.includes(id)}

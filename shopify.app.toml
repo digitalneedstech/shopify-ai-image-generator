@@ -2,7 +2,7 @@
 
 client_id = "078aebbd1149d7bcbd361786069e40c8"
 name = "Imagify"
-handle = "digitalneeds-ai-image-creator"
+handle = "ai-image-creator"
 application_url = "https://ai-image-generator-63t3.onrender.com"
 embedded = true
 

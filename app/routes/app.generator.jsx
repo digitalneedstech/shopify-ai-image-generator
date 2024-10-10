@@ -113,19 +113,28 @@ export default function GeneratorComponent() {
   const [prompt, setPrompt] = useState({ prompt:"" });   
   const [imageUrl,setImageUrl] = useState(null);
   const [imageBlob,setImageBlob] = useState(null);
-  
-  const [formErrors, setFormErrors] = useState(null);
+  const [regenerate,setRegenerate]=useState(false);
   const user = useLoaderData();
-  console.log("user", user.data.plan.name);
   const [updateInProgress, setUpdateInProgress] = useState(false);
   const shopify = useAppBridge();
   const fetcher = useFetcher();
   const productId = fetcher.data?.message.replace("ok", "");
 
+  function reset(){
+    setUpdateInProgress(false);
+    setImageBlob(null);
+    setImageUrl(null);
+    setRegenerate(false);
+    setPrompt((prev) => ({ ...prev, prompt: "" }));
+  }
   useEffect(() => {
     if (productId == "") {
-      shopify.toast.show("Product updated");
-      setUpdateInProgress(false);
+      shopify.modal.hide("image-modal").then((val) => {
+        shopify.toast.show("Product updated", {
+          duration: 5000,
+        });
+      });
+      reset();
     }
   }, [productId, shopify]);
   const products =
@@ -147,6 +156,7 @@ export default function GeneratorComponent() {
 
   const rowMarkup = products.map(
     ({ id, title, imageUrl, description }, index) => (
+      description==null || description==""?<></>:
       <TableRowComponent
         id={id}
         description={description}
@@ -179,18 +189,12 @@ export default function GeneratorComponent() {
     {
       content: "Generate Image",
       onAction: () => {
-        if (selectedResources.length > 1 && user.data.plan.name == "Free") {
+        if (selectedResources.length > 1) {
           shopify.toast.show(
-            "Only one product can be selected under free plan",
+            "Only one product can be selected",
           );
-        } else if (
-          selectedResources.length > 5 &&
-          user.data.plan.name == "Monthly Subscription"
-        ) {
-          shopify.toast.show(
-            "Max 5 products can be selected under monthly plan",
-          );
-        } else {
+          reset();
+        }else{
           const product = products.filter(
             (product) => product.id == selectedResources[0],
           )[0];
@@ -202,6 +206,7 @@ export default function GeneratorComponent() {
   ];
 
   async function applyImage(){
+    setUpdateInProgress(true);
     const product = products.filter(
       (product) => product.id == selectedResources[0],
     )[0];
@@ -223,7 +228,17 @@ export default function GeneratorComponent() {
           { method: "POST" },
         );
         } 
+      
     
+  }
+  
+  async function regenerateImage(){
+    setRegenerate(true);
+    const product = products.filter(
+      (product) => product.id == selectedResources[0],
+    )[0];
+    setPrompt((prev) => ({ ...prev, prompt: "Re generate a product Image for a world class e-commerce store that depicts the description mentioned as : "+product.description }))
+    await callImageGenerationModelAndGenerateImage();
   }
   async function callImageGenerationModelAndGenerateImage(){
     setUpdateInProgress(true);
@@ -236,7 +251,7 @@ export default function GeneratorComponent() {
   return (
     <Page fullWidth>
       <TitleBar title="Update Products"></TitleBar>
-      <Modal id="image-modal">
+      <Modal onHide={reset} id="image-modal">
         <p style={{ padding: "10px" }}>
           Are you sure you want to generate the image?
         </p>
@@ -260,7 +275,7 @@ export default function GeneratorComponent() {
         </div>
         {imageUrl==null ?
         <TitleBar title="Confirmation Message">
-          <button
+          <button disabled={updateInProgress ? true:false}
             onClick={() => {
               shopify.modal.hide("image-modal").then((val) => {
                 shopify.toast.show("Thanks", {
@@ -271,25 +286,35 @@ export default function GeneratorComponent() {
           >
             No
           </button>
-          <button onClick={callImageGenerationModelAndGenerateImage} variant="primary">
+          <button disabled={updateInProgress ? true:false} onClick={callImageGenerationModelAndGenerateImage} variant="primary">
             Yes
           </button>
         </TitleBar>:
         <TitleBar title="Confirmation Message">
-          <button
+          {
+            user.data.plan.name == "Free" ? 
+            <button disabled={updateInProgress ? true:false}
             onClick={() => {
               shopify.modal.hide("image-modal").then((val) => {
                 shopify.toast.show("Thanks", {
                   duration: 5000,
                 });
+                reset();
               });
             }}
           >
-            No
-          </button>
-          <button onClick={applyImage} variant="primary">
-            Apply
-          </button>
+            Ok
+          </button>:
+          <>
+          <button disabled={updateInProgress ? true:false} onClick={applyImage} variant="primary">
+          Apply
+        </button>
+        <button disabled={updateInProgress ? true:false} onClick={regenerateImage}>
+          Regenerate
+        </button>
+        </>
+          }
+          
         </TitleBar>}
       </Modal>
 
