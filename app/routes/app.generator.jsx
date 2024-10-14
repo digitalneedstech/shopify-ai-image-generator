@@ -12,6 +12,7 @@ import {
   Thumbnail,
   useIndexResourceState,
 } from "@shopify/polaris";
+import { Buffer } from 'buffer';
 import { ANNUAL_PLAN, authenticate, MONTHLY_PLAN } from "../shopify.server";
 import { Modal, TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { HumanMessage } from "@langchain/core/messages";
@@ -20,6 +21,7 @@ import {
   getImageBase64Encoded,
   initializeGenerativeAIInstance,
 } from "../functions/util";
+import axios from "axios";
 export async function loader({ request }) {
   const { admin, billing } = await authenticate.admin(request);
   const productsCountResponse = await admin.graphql(
@@ -57,7 +59,7 @@ productsCount{
     // Attempt to check if the shop has an active payment for any plan
     const billingCheck = await billing.require({
       plans: [MONTHLY_PLAN, ANNUAL_PLAN],
-      isTest: false,
+      isTest: true,
       // Instead of redirecting on failure, just catch the error
       onFailure: () => {
         throw new Error("No active plan");
@@ -74,7 +76,7 @@ productsCount{
     // If the shop does not have an active plan, return an empty plan object
     if (error.message === "No active plan") {
       console.log("Shop does not have any active plans.");
-      data.data.plan = {"name":"Free"};
+      data.data.plan = { "name": "Free" };
       return json(data);
     }
     // If there is another error, rethrow it
@@ -84,11 +86,11 @@ productsCount{
 
 export async function action({ request }) {
   const { admin, session } = await authenticate.admin(request);
-  
-  const image = new admin.rest.resources.Image({session: session});
+
+  const image = new admin.rest.resources.Image({ session: session });
   const formData = await request.formData();
   image.product_id = formData.get("id");
-  image.position=1;
+  image.position = 1;
   image.attachment = formData.get("image")
   image.filename = "name.jpeg";
   image.metafields = [
@@ -102,7 +104,7 @@ export async function action({ request }) {
   await image.save({
     update: true,
   });
-return json({
+  return json({
     message: "ok",
     title: `${formData.get("title")}`,
     description: `${formData.get("description")}`,
@@ -110,17 +112,18 @@ return json({
   });
 }
 export default function GeneratorComponent() {
-  const [prompt, setPrompt] = useState({ prompt:"" });   
-  const [imageUrl,setImageUrl] = useState(null);
-  const [imageBlob,setImageBlob] = useState(null);
-  const [regenerate,setRegenerate]=useState(false);
+  const [prompt, setPrompt] = useState({ prompt: "" });
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageBlob, setImageBlob] = useState(null);
+  const [regenerate, setRegenerate] = useState(false);
   const user = useLoaderData();
+  console.log(user.data.plan.name);
   const [updateInProgress, setUpdateInProgress] = useState(false);
   const shopify = useAppBridge();
   const fetcher = useFetcher();
   const productId = fetcher.data?.message.replace("ok", "");
 
-  function reset(){
+  function reset() {
     setUpdateInProgress(false);
     setImageBlob(null);
     setImageUrl(null);
@@ -140,49 +143,75 @@ export default function GeneratorComponent() {
   const products =
     user.data.products != null || user.data.products.length > 0
       ? user.data.products.edges.map((val) => {
-          return {
-            id: val.node.id,
-            title: val.node.title,
-            description: val.node.description,
-            imageUrl:
-              val.node.featuredImage == null
-                ? null
-                : val.node.featuredImage.url,
-          };
-        })
+        return {
+          id: val.node.id,
+          title: val.node.title,
+          description: val.node.description,
+          imageUrl:
+            val.node.featuredImage == null
+              ? null
+              : val.node.featuredImage.url,
+        };
+      })
       : [];
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
     useIndexResourceState(products);
 
   const rowMarkup = products.map(
     ({ id, title, imageUrl, description }, index) => (
-      description==null || description==""?<></>:
-      <TableRowComponent
-        id={id}
-        description={description}
-        imageUrl={imageUrl}
-        title={title}
-        selectedResources={selectedResources}
-        index={index}
-        key={index}
-      ></TableRowComponent>
+      description == null || description == "" ? <></> :
+        <TableRowComponent
+          id={id}
+          description={description}
+          imageUrl={imageUrl}
+          title={title}
+          selectedResources={selectedResources}
+          index={index}
+          key={index}
+        ></TableRowComponent>
     ),
   );
 
   async function getImageFromLLMAndDisplay(data) {
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev",
-      {
-        headers: {
-          "Authorization": "Bearer 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",
-          "Content-Type": "application/json",
+    if (user.data.plan.name == "Free") {
+      const response = await fetch(
+        "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev",
+        {
+          headers: {
+            "Authorization": "Bearer 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",
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      );
+      const result = await response.blob();
+      return result;
+    } else {
+      const payload = {
+        prompt: data.inputs,
+        output_format: "jpeg"
+      };
+
+      const response = await axios.postForm(
+        `https://api.stability.ai/v2beta/stable-image/generate/core`,
+        axios.toFormData(payload, new FormData()),
+        {
+          validateStatus: undefined,
+          responseType: "arraybuffer",
+          headers: {
+            Authorization: "Bearer sk-VbUYn4avUTS1eEr6doh1vRbEQnG9YOvDm1XUZcr62vKYb8zI",
+            Accept: "image/*"
+          },
         },
-        method: "POST",
-        body: JSON.stringify(data),
+      );
+
+      if (response.status === 200) {
+        return new Blob([Buffer.from(response.data)]);
+      } else {
+        throw new Error(`${response.status}: ${response.data.toString()}`);
       }
-    );
-    const result = await response.blob();
-    return result;
+    }
   }
 
   const promotedBulkActions = [
@@ -194,56 +223,56 @@ export default function GeneratorComponent() {
             "Only one product can be selected",
           );
           reset();
-        }else{
+        } else {
           const product = products.filter(
             (product) => product.id == selectedResources[0],
           )[0];
-          setPrompt((prev) => ({ ...prev, prompt: "Generate a product image for a shopify store that that depicts the description mentioned as : "+product.description }))
+          setPrompt((prev) => ({ ...prev, prompt: "Generate a product image for a shopify store that that depicts the description mentioned as : " + product.description }))
           shopify.modal.show("image-modal");
         }
       },
     },
   ];
 
-  async function applyImage(){
+  async function applyImage() {
     setUpdateInProgress(true);
     const product = products.filter(
       (product) => product.id == selectedResources[0],
     )[0];
-    
+
     let reader = new FileReader();
-        reader.readAsDataURL(imageBlob);
-        reader.onloadend = function () {
-        let base64String = reader.result;
-        console.log("image", base64String.substr(base64String.indexOf(',') + 1))
-         fetcher.submit(
-          {
-            id: selectedResources[0].substring(
-              selectedResources[0].lastIndexOf("/") + 1,
-            ),
-            title:product.title,
-            description:product.description,
-            image:base64String.substr(base64String.indexOf(',') + 1)
-          },
-          { method: "POST" },
-        );
-        } 
-      
-    
+    reader.readAsDataURL(imageBlob);
+    reader.onloadend = function () {
+      let base64String = reader.result;
+      console.log("image", base64String.substr(base64String.indexOf(',') + 1))
+      fetcher.submit(
+        {
+          id: selectedResources[0].substring(
+            selectedResources[0].lastIndexOf("/") + 1,
+          ),
+          title: product.title,
+          description: product.description,
+          image: base64String.substr(base64String.indexOf(',') + 1)
+        },
+        { method: "POST" },
+      );
+    }
+
+
   }
-  
-  async function regenerateImage(){
+
+  async function regenerateImage() {
     setRegenerate(true);
     const product = products.filter(
       (product) => product.id == selectedResources[0],
     )[0];
-    setPrompt((prev) => ({ ...prev, prompt: "Re generate a product Image for a world class e-commerce store that depicts the description mentioned as : "+product.description }))
+    setPrompt((prev) => ({ ...prev, prompt: "Re generate a product Image for a world class e-commerce store that depicts the description mentioned as : " + product.description }))
     await callImageGenerationModelAndGenerateImage();
   }
-  async function callImageGenerationModelAndGenerateImage(){
+  async function callImageGenerationModelAndGenerateImage() {
     setUpdateInProgress(true);
-    const image_blob=await getImageFromLLMAndDisplay({"inputs": prompt.prompt});
-    const url=URL.createObjectURL(image_blob);
+    const image_blob = await getImageFromLLMAndDisplay({ "inputs": prompt.prompt });
+    const url = URL.createObjectURL(image_blob);
     setImageUrl(url);
     setImageBlob(image_blob);
     setUpdateInProgress(false);
@@ -256,66 +285,66 @@ export default function GeneratorComponent() {
           Are you sure you want to generate the image?
         </p>
         <div
-      style={{
-        padding: '14px var(--p-space-200)'
-      }}
-    >
-      {
-        imageUrl==null ? <></>:<Thumbnail source={imageUrl} alt="Black choker necklace" />
-      }
-        <TextField
-        disabled={true}
-          value={prompt.prompt}
-          onChange={(val) => setPrompt((prev) => ({ ...prev, prompt: val }))}
-          label="Enter Prompt Message"
-        />
-        
-        { updateInProgress ?
-        <Spinner accessibilityLabel="Spinner example" size="large" />:<></>}
-        </div>
-        {imageUrl==null ?
-        <TitleBar title="Confirmation Message">
-          <button disabled={updateInProgress ? true:false}
-            onClick={() => {
-              shopify.modal.hide("image-modal").then((val) => {
-                shopify.toast.show("Thanks", {
-                  duration: 5000,
-                });
-              });
-            }}
-          >
-            No
-          </button>
-          <button disabled={updateInProgress ? true:false} onClick={callImageGenerationModelAndGenerateImage} variant="primary">
-            Yes
-          </button>
-        </TitleBar>:
-        <TitleBar title="Confirmation Message">
+          style={{
+            padding: '14px var(--p-space-200)'
+          }}
+        >
           {
-            user.data.plan.name == "Free" ? 
-            <button disabled={updateInProgress ? true:false}
-            onClick={() => {
-              shopify.modal.hide("image-modal").then((val) => {
-                shopify.toast.show("Thanks", {
-                  duration: 5000,
-                });
-                reset();
-              });
-            }}
-          >
-            Ok
-          </button>:
-          <>
-          <button disabled={updateInProgress ? true:false} onClick={applyImage} variant="primary">
-          Apply
-        </button>
-        <button disabled={updateInProgress ? true:false} onClick={regenerateImage}>
-          Regenerate
-        </button>
-        </>
+            imageUrl == null ? <></> : <Thumbnail source={imageUrl} alt="Black choker necklace" />
           }
-          
-        </TitleBar>}
+          <TextField
+            disabled={true}
+            value={prompt.prompt}
+            onChange={(val) => setPrompt((prev) => ({ ...prev, prompt: val }))}
+            label="Enter Prompt Message"
+          />
+
+          {updateInProgress ?
+            <Spinner accessibilityLabel="Spinner example" size="large" /> : <></>}
+        </div>
+        {imageUrl == null ?
+          <TitleBar title="Confirmation Message">
+            <button disabled={updateInProgress ? true : false}
+              onClick={() => {
+                shopify.modal.hide("image-modal").then((val) => {
+                  shopify.toast.show("Thanks", {
+                    duration: 5000,
+                  });
+                });
+              }}
+            >
+              No
+            </button>
+            <button disabled={updateInProgress ? true : false} onClick={callImageGenerationModelAndGenerateImage} variant="primary">
+              Yes
+            </button>
+          </TitleBar> :
+          <TitleBar title="Confirmation Message">
+            {
+              user.data.plan.name == "Free" ?
+                <button disabled={updateInProgress ? true : false}
+                  onClick={() => {
+                    shopify.modal.hide("image-modal").then((val) => {
+                      shopify.toast.show("Thanks", {
+                        duration: 5000,
+                      });
+                      reset();
+                    });
+                  }}
+                >
+                  Ok
+                </button> :
+                <>
+                  <button disabled={updateInProgress ? true : false} onClick={applyImage} variant="primary">
+                    Apply
+                  </button>
+                  <button disabled={updateInProgress ? true : false} onClick={regenerateImage}>
+                    Regenerate
+                  </button>
+                </>
+            }
+
+          </TitleBar>}
       </Modal>
 
       <Layout>
@@ -345,7 +374,7 @@ export default function GeneratorComponent() {
                 promotedBulkActions={promotedBulkActions}
                 pagination={{
                   hasNext: true,
-                  onNext: () => {},
+                  onNext: () => { },
                 }}
               >
                 {rowMarkup}
