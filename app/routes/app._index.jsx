@@ -125,7 +125,7 @@ let planData = [
     name: "Free",
     url: "/app/upgrade",
     features: [
-      "Generate Product Image",
+      "High Response time",
       "One Image for one product can be generated at one time",
       "Slow Image generation"
     ]
@@ -138,7 +138,7 @@ let planData = [
     action: "Upgrade to pro",
     url: "/app/upgrade",
     features: [
-      "Generate Product Image",
+      "Low Response Time",
       "One Image for one product can be generated at one time",
       "Apply and re-generate the image"
     ]
