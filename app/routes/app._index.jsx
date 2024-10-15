@@ -120,6 +120,7 @@ let planData = [
   {
     title: "Free",
     description: "Free plan with basic features",
+    subDescription:"",
     price: "0",
     action: "Upgrade to Pro",
     name: "Free",
@@ -133,6 +134,7 @@ let planData = [
   {
     title: "Pro",
     description: "Pro plan with advanced features",
+    subDescription: "$50/Yearly",
     price: "5",
     name: "Pro",
     action: "Upgrade to pro",
@@ -238,8 +240,9 @@ We're available at</Text> <Text as="p" fontWeight="bold">digitalneeds.tech@gmail
                   {/* If plan_item is 0, display nothing */}
                   <br />
                   <Text as="p" variant="headingLg" fontWeight="bold">
-                    {plan_item.price === "0" ? "" : "$" + plan_item.price}
+                    {plan_item.price === "0" ? "" : "$" + plan_item.price+"/Month"}
                   </Text>
+                  {plan_item.subDescription!="" ? plan_item.subDescription:""}
                 </Box>
 
                 <div style={{ margin: "0.5rem 0"}}>

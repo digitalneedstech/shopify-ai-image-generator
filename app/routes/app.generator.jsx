@@ -115,6 +115,7 @@ export default function GeneratorComponent() {
   const [prompt, setPrompt] = useState({ prompt: "" });
   const [imageUrl, setImageUrl] = useState(null);
   const [imageBlob, setImageBlob] = useState(null);
+  const [error, setError]= useState(null);
   const [regenerate, setRegenerate] = useState(false);
   const user = useLoaderData();
   console.log(user.data.plan.name);
@@ -129,6 +130,7 @@ export default function GeneratorComponent() {
     setImageUrl(null);
     setRegenerate(false);
     setPrompt((prev) => ({ ...prev, prompt: "" }));
+    setError(null);
   }
   useEffect(() => {
     if (productId == "") {
@@ -173,6 +175,7 @@ export default function GeneratorComponent() {
   );
 
   async function getImageFromLLMAndDisplay(data) {
+    /*
     if (user.data.plan.name == "Free") {
       const response = await fetch(
         "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev",
@@ -188,6 +191,7 @@ export default function GeneratorComponent() {
       const result = await response.blob();
       return result;
     } else {
+     */
       const payload = {
         prompt: data.inputs,
         output_format: "jpeg"
@@ -209,9 +213,11 @@ export default function GeneratorComponent() {
       if (response.status === 200) {
         return new Blob([Buffer.from(response.data)]);
       } else {
-        throw new Error(`${response.status}: ${response.data.toString()}`);
+        setUpdateInProgress(false);
+        setError(response.data.toString());
+        //throw new Error(`${response.status}: ${response.data.toString()}`);
       }
-    }
+    
   }
 
   const promotedBulkActions = [
@@ -301,6 +307,7 @@ export default function GeneratorComponent() {
 
           {updateInProgress ?
             <Spinner accessibilityLabel="Spinner example" size="large" /> : <></>}
+            {error==null ?<></>:<Text> {error}</Text>}
         </div>
         {imageUrl == null ?
           <TitleBar title="Confirmation Message">
