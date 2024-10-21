@@ -136,6 +136,7 @@ let planData = [
     description: "Pro plan with advanced features",
     price: "5",
     name: "Monthly",
+    suffix:"Month",
     action: "Upgrade to Monthly Plan",
     url: "/app/monthly",
     features: [
@@ -150,6 +151,7 @@ let planData = [
     subDescription: "$50/Yearly",
     price: "50",
     name: "Yearly",
+    suffix:"Year",
     action: "Upgrade to Yearly Plan",
     url: "/app/yearly",
     features: [
@@ -253,7 +255,7 @@ We're available at</Text> <Text as="p" fontWeight="bold">digitalneeds.tech@gmail
                   {/* If plan_item is 0, display nothing */}
                   <br />
                   <Text as="p" variant="headingLg" fontWeight="bold">
-                    {plan_item.price === "0" ? "" : "$" + plan_item.price+"/"+ plan_item.name}
+                    {plan_item.price === "0" ? "" : "$" + plan_item.price+"/"+ plan_item.suffix}
                   </Text>
                   
                 </Box>
