@@ -71,6 +71,7 @@ productsCount{
     }
         pageInfo{
           hasNextPage
+          hasPreviousPage
         }
     
       }
@@ -101,6 +102,7 @@ productsCount{
     }
         pageInfo{
           hasNextPage
+          hasPreviousPage
         }
     
       }
@@ -136,6 +138,7 @@ productsCount{
   }
       pageInfo{
         hasNextPage
+        hasPreviousPage
       }
   
     }
@@ -493,7 +496,7 @@ export default function GeneratorComponent() {
                 promotedBulkActions={promotedBulkActions}
                 pagination={{
                   hasNext: user.data.products.pageInfo.hasNextPage,
-                  hasPrevious:true,
+                  hasPrevious:user.data.products.pageInfo.hasPreviousPage,
                   onPrevious:()=>{
                     const cursor=user.data.products.edges[0].cursor;
                     searchParams.set('cursor', cursor);
