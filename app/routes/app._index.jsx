@@ -16,7 +16,7 @@ import {
   List
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { ANNUAL_PLAN, authenticate, MONTHLY_PLAN } from "../shopify.server";
+import { YEARLY_PLAN, authenticate, MONTHLY_PLAN } from "../shopify.server";
 
 export async function loader({ request }) {
   const { billing } = await authenticate.admin(request);
@@ -24,7 +24,7 @@ export async function loader({ request }) {
   try {
     // Attempt to check if the shop has an active payment for any plan
     const billingCheck = await billing.require({
-      plans: [MONTHLY_PLAN, ANNUAL_PLAN],
+      plans: [MONTHLY_PLAN, YEARLY_PLAN],
       isTest: true,
       // Instead of redirecting on failure, just catch the error
       onFailure: () => {
@@ -122,9 +122,9 @@ let planData = [
     description: "Free plan with basic features",
     subDescription:"",
     price: "0",
-    action: "Upgrade to Pro",
+    action: "Switch to Free",
     name: "Free",
-    url: "/app/upgrade",
+    url: "/app/free",
     features: [
       "High Response time",
       "One Image for one product can be generated at one time",
@@ -132,13 +132,26 @@ let planData = [
     ]
   },
   {
-    title: "Pro",
+    title: "Monthly",
+    description: "Pro plan with advanced features",
+    price: "5",
+    name: "Monthly",
+    action: "Upgrade to Monthly Plan",
+    url: "/app/monthly",
+    features: [
+      "Low Response Time",
+      "One Image for one product can be generated at one time",
+      "Apply and re-generate the image"
+    ]
+  },
+  {
+    title: "Yearly",
     description: "Pro plan with advanced features",
     subDescription: "$50/Yearly",
-    price: "5",
-    name: "Pro",
-    action: "Upgrade to pro",
-    url: "/app/upgrade",
+    price: "50",
+    name: "Yearly",
+    action: "Upgrade to Yearly Plan",
+    url: "/app/yearly",
     features: [
       "Low Response Time",
       "One Image for one product can be generated at one time",
@@ -229,7 +242,7 @@ We're available at</Text> <Text as="p" fontWeight="bold">digitalneeds.tech@gmail
       <Grid>
 
         {planData.map((plan_item, index) => (
-          <Grid.Cell key={index} columnSpan={{xs: 6, sm: 3, md: 3, lg: 6, xl: 6}}>
+          <Grid.Cell key={index} columnSpan={{xs: 3, sm: 3, md: 3, lg: 4, xl: 4}}>
             <Card background={ plan_item.name == plan.name ? "bg-surface-success" : "bg-surface" } sectioned>
               <Box padding="400">
                 <Text as="h3" variant="headingMd">
@@ -240,9 +253,9 @@ We're available at</Text> <Text as="p" fontWeight="bold">digitalneeds.tech@gmail
                   {/* If plan_item is 0, display nothing */}
                   <br />
                   <Text as="p" variant="headingLg" fontWeight="bold">
-                    {plan_item.price === "0" ? "" : "$" + plan_item.price+"/Month"}
+                    {plan_item.price === "0" ? "" : "$" + plan_item.price+"/"+ plan_item.name}
                   </Text>
-                  {plan_item.subDescription!="" ? plan_item.subDescription:""}
+                  
                 </Box>
 
                 <div style={{ margin: "0.5rem 0"}}>
@@ -265,8 +278,31 @@ We're available at</Text> <Text as="p" fontWeight="bold">digitalneeds.tech@gmail
                   <Divider />
                 </div>
 
-                { plan_item.name == "Pro" ?
-                  plan.name != "Pro" ? (
+                { plan_item.name == "Monthly"?
+                  plan.name != "Monthly" ? (
+                    <Button primary url={plan_item.url}>
+                      {plan_item.action}
+                    </Button>
+                  ) : (
+                    <Text as="p" variant="bodyMd">
+                      You're currently on this plan
+                    </Text>
+                  )
+                : null }
+                { plan_item.name == "Yearly"?
+                  plan.name!="Yearly" ? (
+                    <Button primary url={plan_item.url}>
+                      {plan_item.action}
+                    </Button>
+                  ) : (
+                    <Text as="p" variant="bodyMd">
+                      You're currently on this plan
+                    </Text>
+                  )
+                : null }
+
+              { plan_item.name == "Free" ?
+                  plan.name != "Free" ? (
                     <Button primary url={plan_item.url}>
                       {plan_item.action}
                     </Button>

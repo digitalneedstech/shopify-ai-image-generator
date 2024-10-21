@@ -8,7 +8,7 @@ export default function TableRowComponent({ id, title, imageUrl, description, in
         key={id}
         selected={selectedResources.includes(id)}
         position={index}
-        disabled={disabled}
+        disabled={false}
       >   
 
         <IndexTable.Cell>

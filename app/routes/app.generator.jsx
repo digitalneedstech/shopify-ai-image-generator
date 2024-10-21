@@ -1,8 +1,7 @@
 import { Form, useFetcher, useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  BlockStack,
   EmptyState,
   IndexTable,
   Layout,
@@ -15,13 +14,24 @@ import {
 import { Buffer } from 'buffer';
 import { ANNUAL_PLAN, authenticate, MONTHLY_PLAN } from "../shopify.server";
 import { Modal, TitleBar, useAppBridge } from "@shopify/app-bridge-react";
-import { HumanMessage } from "@langchain/core/messages";
 import TableRowComponent from "../components/table_row/table_row";
-import {
-  getImageBase64Encoded,
-  initializeGenerativeAIInstance,
-} from "../functions/util";
 import axios from "axios";
+import { useSearchParams } from 'react-router-dom';
+/*
+export function shouldRevalidate({
+  currentParams,
+  nextParams,
+  defaultShouldRevalidate,
+}) {
+  const currentId = currentParams.slug.split("--")[1];
+  const nextId = nextParams.slug.split("--")[1];
+  if (currentId === nextId) {
+    return false;
+  }
+
+  return defaultShouldRevalidate;
+}
+*/
 export async function loader({ request }) {
   const { admin, billing } = await authenticate.admin(request);
   const productsCountResponse = await admin.graphql(
@@ -34,10 +44,83 @@ productsCount{
   );
 
   const productsCount = await productsCountResponse.json();
-  const response = await admin.graphql(
+  const url = new URL(request.url);
+  const cursor = url.searchParams.get("cursor");
+  const dir = url.searchParams.get("dir");
+  console.log("cursor2",cursor);
+  let response;
+  let data;
+  if(typeof cursor!== undefined && cursor!==null){
+    if(dir=="after"){
+      response = await admin.graphql(
+      `#graphql
+    query ($cursor:String,$number:Int) {
+      products(first:$number,after:$cursor) {
+      edges {
+          node {
+        title
+        id
+        description   
+        onlineStoreUrl
+        featuredImage {
+          url
+        }
+          
+    }
+        cursor
+    }
+        pageInfo{
+          hasNextPage
+        }
+    
+      }
+    }`,{
+    variables:{
+      number:10,
+      cursor:cursor
+    }
+  }
+    );
+  }else{
+    response = await admin.graphql(
+      `#graphql
+    query ($cursor:String,$number:Int) {
+      products(last:$number,before:$cursor) {
+      edges {
+          node {
+        title
+        id
+        description   
+        onlineStoreUrl
+        featuredImage {
+          url
+        }
+          
+    }
+        cursor
+    }
+        pageInfo{
+          hasNextPage
+        }
+    
+      }
+    }`,{
+    variables:{
+      number:10,
+      cursor:cursor
+    }
+  }
+    );
+  }
+    data = await response.json();
+  data.data.call="second";
+  data.data.cursor=cursor;
+  }
+  else{
+  response = await admin.graphql(
     `#graphql
-  query {
-    products(first: 10) {
+  query ($number:Int) {
+    products(first:$number) {
     edges {
         node {
       title
@@ -47,12 +130,26 @@ productsCount{
       featuredImage {
         url
       }
+        
   }
+      cursor
   }
+      pageInfo{
+        hasNextPage
+      }
+  
     }
-  }`,
+  }`,{
+  variables:{
+    number:10
+  }
+}
   );
-  const data = await response.json();
+
+  data = await response.json();
+  data.data.call="first";
+  }
+  
   data.data.count = productsCount.data.productsCount.count;
   data.data.message = "ok";
   try {
@@ -87,8 +184,9 @@ productsCount{
 export async function action({ request }) {
   const { admin, session } = await authenticate.admin(request);
 
-  const image = new admin.rest.resources.Image({ session: session });
   const formData = await request.formData();
+  
+  const image = new admin.rest.resources.Image({ session: session });
   image.product_id = formData.get("id");
   image.position = 1;
   image.attachment = formData.get("image")
@@ -110,19 +208,27 @@ export async function action({ request }) {
     description: `${formData.get("description")}`,
     id: formData.get("id"),
   });
+
 }
+export const shouldRevalidate = ({formMethod, currentParams, nextParams, defaultShouldRevalidate})=>{
+  if(formMethod === "GET" && currentParams.cursor === nextParams.cursor) return false;
+  return defaultShouldRevalidate;
+}
+
 export default function GeneratorComponent() {
   const [prompt, setPrompt] = useState({ prompt: "" });
   const [imageUrl, setImageUrl] = useState(null);
   const [imageBlob, setImageBlob] = useState(null);
-  const [error, setError]= useState(null);
+  const [error, setError] = useState(null);
   const [regenerate, setRegenerate] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useLoaderData();
-  console.log(user.data.plan.name);
+  console.log("user",user);
   const [updateInProgress, setUpdateInProgress] = useState(false);
   const shopify = useAppBridge();
   const fetcher = useFetcher();
-  const productId = fetcher.data?.message.replace("ok", "");
+  const productId = fetcher.data?.message?.replace("ok", "");
+  const fetcherRef = useRef();
 
   function reset() {
     setUpdateInProgress(false);
@@ -161,7 +267,7 @@ export default function GeneratorComponent() {
 
   const rowMarkup = products.map(
     ({ id, title, imageUrl, description }, index) => (
-      description == null || description == "" ? <></> :
+      //description == null || description == "" ? <></> :
         <TableRowComponent
           id={id}
           description={description}
@@ -192,32 +298,32 @@ export default function GeneratorComponent() {
       return result;
     } else {
      */
-      const payload = {
-        prompt: data.inputs,
-        output_format: "jpeg"
-      };
+    const payload = {
+      prompt: data.inputs,
+      output_format: "jpeg"
+    };
 
-      const response = await axios.postForm(
-        `https://api.stability.ai/v2beta/stable-image/generate/core`,
-        axios.toFormData(payload, new FormData()),
-        {
-          validateStatus: undefined,
-          responseType: "arraybuffer",
-          headers: {
-            Authorization: "Bearer sk-VbUYn4avUTS1eEr6doh1vRbEQnG9YOvDm1XUZcr62vKYb8zI",
-            Accept: "image/*"
-          },
+    const response = await axios.postForm(
+      `https://api.stability.ai/v2beta/stable-image/generate/core`,
+      axios.toFormData(payload, new FormData()),
+      {
+        validateStatus: undefined,
+        responseType: "arraybuffer",
+        headers: {
+          Authorization: "Bearer sk-VbUYn4avUTS1eEr6doh1vRbEQnG9YOvDm1XUZcr62vKYb8zI",
+          Accept: "image/*"
         },
-      );
+      },
+    );
 
-      if (response.status === 200) {
-        return new Blob([Buffer.from(response.data)]);
-      } else {
-        setUpdateInProgress(false);
-        setError(response.data.toString());
-        //throw new Error(`${response.status}: ${response.data.toString()}`);
-      }
-    
+    if (response.status === 200) {
+      return new Blob([Buffer.from(response.data)]);
+    } else {
+      setUpdateInProgress(false);
+      setError(response.data.toString());
+      //throw new Error(`${response.status}: ${response.data.toString()}`);
+    }
+
   }
 
   const promotedBulkActions = [
@@ -233,8 +339,14 @@ export default function GeneratorComponent() {
           const product = products.filter(
             (product) => product.id == selectedResources[0],
           )[0];
-          setPrompt((prev) => ({ ...prev, prompt: "Generate a product image for a shopify store that that depicts the description mentioned as : " + product.description }))
-          shopify.modal.show("image-modal");
+          if(product.description==null || product.description==""){
+            shopify.toast.show(
+              "Product should have description already generated",
+            ); 
+          }else{
+            setPrompt((prev) => ({ ...prev, prompt: "Generate a product image for a shopify store that that depicts the description mentioned as : " + product.description }))
+            shopify.modal.show("image-modal");
+          }
         }
       },
     },
@@ -307,7 +419,7 @@ export default function GeneratorComponent() {
 
           {updateInProgress ?
             <Spinner accessibilityLabel="Spinner example" size="large" /> : <></>}
-            {error==null ?<></>:<Text> {error}</Text>}
+          {error == null ? <></> : <Text> {error}</Text>}
         </div>
         {imageUrl == null ?
           <TitleBar title="Confirmation Message">
@@ -380,8 +492,22 @@ export default function GeneratorComponent() {
                 ]}
                 promotedBulkActions={promotedBulkActions}
                 pagination={{
-                  hasNext: true,
-                  onNext: () => { },
+                  hasNext: user.data.products.pageInfo.hasNextPage,
+                  hasPrevious:true,
+                  onPrevious:()=>{
+                    const cursor=user.data.products.edges[0].cursor;
+                    searchParams.set('cursor', cursor);
+                    searchParams.set("dir","before");
+                    setSearchParams(searchParams);
+                  },
+                  onNext: ()=>{
+                    const cursor=user.data.products.edges[user.data.products.edges.length-1].cursor;
+                    //fetcher.load(`?cursor=${cursor}`);
+                    searchParams.set('cursor', cursor);
+                    searchParams.set("dir","after");
+                    setSearchParams(searchParams);
+   
+                  }
                 }}
               >
                 {rowMarkup}
