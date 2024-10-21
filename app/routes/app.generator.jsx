@@ -12,7 +12,7 @@ import {
   useIndexResourceState,
 } from "@shopify/polaris";
 import { Buffer } from 'buffer';
-import { ANNUAL_PLAN, authenticate, MONTHLY_PLAN } from "../shopify.server";
+import { YEARLY_PLAN, authenticate, MONTHLY_PLAN } from "../shopify.server";
 import { Modal, TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import TableRowComponent from "../components/table_row/table_row";
 import axios from "axios";
@@ -158,7 +158,7 @@ productsCount{
   try {
     // Attempt to check if the shop has an active payment for any plan
     const billingCheck = await billing.require({
-      plans: [MONTHLY_PLAN, ANNUAL_PLAN],
+      plans: [MONTHLY_PLAN, YEARLY_PLAN],
       isTest: true,
       // Instead of redirecting on failure, just catch the error
       onFailure: () => {
