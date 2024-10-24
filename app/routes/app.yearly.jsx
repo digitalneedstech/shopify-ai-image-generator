@@ -8,7 +8,7 @@ export async function loader({ request }) {
     plans: [YEARLY_PLAN],
     onFailure: async () => billing.request({
       plan: YEARLY_PLAN,
-      isTest: true,
+      isTest: false,
       returnUrl: `https://admin.shopify.com/store/${myshop}/apps/ai-image-creator/app`
     }),
   });

@@ -15,7 +15,7 @@ export async function loader({ request }) {
   const subscription = billingCheck.appSubscriptions[0];
   const cancelledSubscription = await billing.cancel({
     subscriptionId: subscription.id,
-    isTest: true,
+    isTest: false,
     prorate: false,
    });
    return json({"status":cancelledSubscription.status});
